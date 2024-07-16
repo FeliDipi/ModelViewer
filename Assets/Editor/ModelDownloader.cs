@@ -14,7 +14,10 @@ public class ModelDownloader : EditorWindow
 
     private UnityWebRequest _request;
 
+    private GameObject _modelDownloaded;
     private GameObject _modelInstanced;
+
+    private Texture2D _previewTexture;
 
     [MenuItem("Window/Model Downloader")]
     public static void ShowWindow()
@@ -37,11 +40,42 @@ public class ModelDownloader : EditorWindow
         GUILayout.BeginVertical();
 
         Rect progressRect = EditorGUILayout.GetControlRect(false, 25);
-        EditorGUI.ProgressBar(progressRect, _downloadProgress, _downloadProgress < 1f ? "Loading" : "Complete");
-        GUILayout.Label(_downloadDebug);
+        EditorGUI.ProgressBar(
+            progressRect, 
+            _downloadProgress, 
+            _downloadProgress < 1f ? 
+                $"Loading {_downloadProgress*100}%" : 
+                "Complete"
+            );
+
+        GUILayout.Label("Download Debug Info:");
+        GUILayout.TextArea(_downloadDebug, GUILayout.Height(100));
+
+        GUILayout.Space(10);
+
+        if (GUILayout.Button("Load Model Downloaded"))
+        {
+            LoadModelFromResources();
+        }
+
+        if(_modelDownloaded)
+        {
+            _previewTexture = AssetPreview.GetAssetPreview(_modelDownloaded);
+            if (_previewTexture == null)
+            {
+                AssetPreview.SetPreviewTextureCacheSize(1);
+                _previewTexture = AssetPreview.GetAssetPreview(_modelDownloaded);
+            }
+
+            GUILayout.Label("Preview:");
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(_previewTexture, GUILayout.Width(128), GUILayout.Height(128));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+        }
 
         GUILayout.EndVertical();
-
         GUILayout.Space(15);
 
         GUILayout.Label("Instantiation Test");
@@ -57,13 +91,17 @@ public class ModelDownloader : EditorWindow
         }
     }
 
+    private void LoadModelFromResources()
+    {
+        _modelDownloaded = Resources.Load<GameObject>(_nameModel);
+    }
+
     private void InstanceModelDownloaded()
     {
         Vector3 cameraPosition = Camera.main.transform.position;
         cameraPosition.y = 0f;
 
-        GameObject modelDownloaded = Resources.Load<GameObject>(_nameModel);
-        _modelInstanced = Instantiate(modelDownloaded, cameraPosition + Vector3.forward*40f, Quaternion.identity);
+        _modelInstanced  = Instantiate(_modelDownloaded, cameraPosition + Vector3.forward*40f, Quaternion.identity);
 
         foreach (Camera camera in _modelInstanced.GetComponentsInChildren<Camera>())
         {
@@ -109,6 +147,8 @@ public class ModelDownloader : EditorWindow
 
                 _downloadDebug = debug;
                 Debug.Log(debug);
+
+                LoadModelFromResources();
             }
         };
 
